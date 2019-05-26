@@ -20,7 +20,8 @@ puts 'Feeding ES, please wait...'
       first_name: Faker::Name.first_name,
       last_name: Faker::Name.last_name,
       nick_name: Faker::Games::Dota.player,
-      team_name: Faker::Team.name,
+      scores: rand(29_000),
+      team_name: Faker::Team.name
     }
   )
 end
