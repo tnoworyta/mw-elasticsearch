@@ -1,0 +1,191 @@
+Get 50:
+
+GET /players/_search?size=50
+{
+    "query": {
+        "match_all": {}
+    }
+}
+
+## Mappings
+
+PUT /awesome_posts
+{
+    "settings" : {
+        "number_of_shards" : 1
+    },
+    "mappings" : {
+        "_doc" : {
+            "properties" : {
+                "user" : { "type" : "text" },
+                "body" : { "type" : "text" },
+                "read_count" : { "type" : "integer" }
+
+            }
+        }
+    }
+}
+
+
+PUT /players
+{
+    "settings" : {
+        "number_of_shards" : 1
+    },
+    "mappings" : {
+        "_doc" : {
+            "properties" : {
+                "first_name" : { "type" : "keyword" },
+                "last_name" : { "type" : "keyword" },
+                "nick_name" : { type: "keyword" },
+                "team_name" : { type: "keyword" },
+                "scores" : { "type" : "integer" }
+
+            }
+        }
+    }
+}
+
+
+Wildcard
+GET /players/_search?q=team_name:caro*
+
+## Match query
+
+GET /players/_search
+{
+    "query": {
+        "match" : {
+            "team_name" : "carolina"
+        }
+    }
+}
+
+Fuzzy
+
+GET /players/_search
+{
+    "query": {
+        "match" : {
+            "team_name" : {
+                "query" : "Mninesoat",
+                "fuzziness": 2
+            }
+        }
+    }
+}
+
+## Match phrase (all the terms must appear in the field)
+GET /players/_search
+{
+    "query": {
+        "match_phrase" : {
+            "team_name" : "North Carolina foes"
+        }
+    }
+}
+
+
+## Match phrase prefix (a search as you type)
+GET /players/_search
+{
+    "query": {
+        "match_phrase_prefix" : {
+            "team_name" : "North Carolin"
+        }
+    }
+}
+
+
+## Multi match
+
+GET /players/_search
+{
+    "query": {
+        "multi_match" : {
+            "query" : "North Carolina",
+            "fields": [ "team_*", "first_name"]
+        }
+    }
+}
+
+## Common Terms
+
+GET /players/_search
+{
+    "query": {
+        "common": {
+            "team_name": {
+                "query": "the new york",
+                "cutoff_frequency": 0.001
+            }
+        }
+    }
+}
+
+
+## Query string
+
+GET /players/_search
+{
+    "query": {
+        "query_string" : {
+            "default_field" : "team_name",
+            "query" : "(cat*) or (Tennessee)"
+        }
+    }
+}
+
+
+## Sorting:
+
+GET /players/_search
+{
+    "sort" : [
+        { "first_name.keyword" : "asc"},
+        {"last_name.keyword": "asc" }
+    ],
+    "query" : {
+        "term" : { "team_name" : "carolina" }
+    }
+}
+
+GET /players/_search?size=40
+{
+    "sort" : [
+      {"scores": "desc"},
+        { "first_name.keyword" : "asc"},
+        {"last_name.keyword": "asc" }
+    ],
+    "query" : {
+        "term" : { "team_name" : "carolina" }
+    }
+}
+
+
+PUT /players2
+{
+    "settings": {
+        "index" : {
+            "analysis" : {
+                "analyzer" : {
+                    "synonym" : {
+                        "tokenizer" : "standard",
+                        "filter" : ["my_stop", "synonym_graph"]
+                    }
+                },
+                "filter" : {
+                    "my_stop": {
+                        "type" : "stop",
+                        "stopwords": ["bar"]
+                    },
+                    "synonym_graph" : {
+                        "type" : "synonym_graph",
+                        "lenient": true,
+                        "synonyms" : ["ny => New York"]
+                    }
+                }
+            }
+        }
+    }
+}

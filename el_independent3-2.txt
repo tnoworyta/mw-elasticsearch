@@ -1,0 +1,357 @@
+### ----- FULL TEXT QUERIES ------
+
+## Match query
+
+GET /players/_search?size=50
+{
+    "query": {
+        "match" : {
+            "team_name" : "carolina"
+        }
+    }
+}
+
+## Match query - fuzzy
+
+#does not work without:
+GET /players/_search?size=50
+{
+    "query": {
+        "match" : {
+            "team_name" : {
+                "query" : "Mninesoat"
+            }
+        }
+    }
+}
+
+GET /players/_search?size=50
+{
+    "query": {
+        "match" : {
+            "team_name" : {
+                "query" : "Mninesoat",
+                "fuzziness": 2
+            }
+        }
+    }
+}
+
+## Match query - Zero terms query
+
+#If the analyzer used removes all tokens in a query like a stop filter does, the default behavior is to match no documents at all.
+
+GET /players/_search?size=50
+{
+    "query": {
+        "match" : {
+            "team_name" : {
+              "query": "to be or not to be",
+              "operator": "and",
+              "zero_terms_query": "all"
+            }
+        }
+    }
+}
+
+# Match query - Cut-off
+#allows specifying an absolute or relative document frequency where high frequency terms are moved into an optional subquery and are only scored if one/all (depending on operator) of the low frequency (below the cutoff) terms match
+
+GET /players/_search?size=50
+{
+    "query": {
+        "match" : {
+            "team_name" : {
+                "query" : "to be or not to be",
+                "operator": "and",
+                "cutoff_frequency" : 0.001
+            }
+        }
+    }
+}
+
+## Match Phrase Query
+# A phrase query matches terms up to a configurable slop (which defaults to 0) in any order
+
+#does work but returns others:
+GET /players/_search?size=50
+{
+    "query": {
+        "match" : {
+            "team_name" : {
+                "query" : "oxen Carolina North"
+            }
+        }
+    }
+}
+
+GET /players/_search?size=50
+{
+    "query": {
+        "match_phrase" : {
+            "team_name" : {
+              "query" : "oxen carolina north",
+              "slop": 4
+
+            }
+        }
+    }
+}
+
+## Match phrase prefix
+#The poor man’s search-as-you-type. Like the match_phrase query, but does a wildcard search on the final word.
+GET /players/_search?size=50
+{
+    "query": {
+        "match_phrase_prefix" : {
+            "team_name" : "utah b"
+        }
+    }
+}
+
+## Multi match
+
+#best_fields: Finds documents which match any field, but uses the _score from the best field
+GET /players/_search?size=50
+{
+    "query": {
+        "multi_match" : {
+            "query" : "Carolina",
+            "fields": [ "team_*", "first_name"],
+            "operator": "and"
+        }
+    }
+}
+
+# best_fields: boost one field over others
+GET /players/_search?size=50
+{
+    "query": {
+        "multi_match" : {
+            "query" : "Carolina",
+            "fields": [ "team_*^3", "first_name"],
+            "operator": "and"
+        }
+    }
+}
+
+#most fields: when querying multiple fields that contain the same text analyzed in different ways
+#The score from each match clause is added together, then divided by the number of match clauses.
+GET /players/_search?size=50
+{
+    "query": {
+        "multi_match" : {
+            "query" : "Carolina",
+            "type":   "most_fields",
+            "fields": [ "team_*", "first_name"]
+        }
+    }
+}
+
+#phrase/phrase_prefix: behave just like best_fields, but they use a match_phrase or match_phrase_prefix query instead of query match
+GET /players/_search?size=50
+{
+    "query": {
+        "multi_match" : {
+            "query" : "north Caroli",
+            "type":   "phrase_prefix",
+            "fields": [ "team_*", "first_name"]
+        }
+    }
+}
+
+#cross_fields: The cross_fields type is particularly useful with structured documents where multiple fields should match
+
+# could be done by most_fields but not precise enough (2 hits)
+GET /players/_search
+{
+  "query": {
+    "multi_match" : {
+      "query":      "Jessica Chastain",
+      "type":       "most_fields",
+      "fields":     [ "first_name", "last_name" ]
+    }
+  }
+}
+
+
+# 'and' is applied on per-field basis instead whole term (no hits)
+GET /players/_search
+{
+  "query": {
+    "multi_match" : {
+      "query":      "Jessica Chastain",
+      "type":       "most_fields",
+      "fields":     [ "first_name", "last_name" ],
+      "operator":   "and"
+
+    }
+  }
+}
+
+# this gives us the correct hit
+GET /players/_search
+{
+  "query": {
+    "multi_match" : {
+      "query":      "Jessica Chastain",
+      "type":       "cross_fields",
+      "fields":     [ "first_name", "last_name" ],
+      "operator":   "and"
+    }
+  }
+}
+
+## Common terms query
+#The common terms query is a modern alternative to stopwords which improves the precision and recall of search results.
+#The common terms query divides the query terms into two groups: more important (ie low frequency terms) and less important (ie high frequency terms which would previously have been stopwords).
+
+GET /players/_search
+{
+    "query": {
+        "common": {
+            "team_name": {
+                "query": "to or",
+                "cutoff_frequency": 0.001
+            }
+        }
+    }
+}
+
+GET /players/_search
+{
+    "query": {
+        "common": {
+            "team_name": {
+                "query": "the giants are",
+                "cutoff_frequency": 0.001,
+                "minimum_should_match": {
+                    "low_freq" : 2,
+                    "high_freq" : 3
+                }
+            }
+        }
+    }
+}
+
+## Query string query
+#A query that uses a query parser in order to parse its content
+
+GET /players/_search?size=50
+{
+    "query": {
+        "query_string" : {
+            "default_field" : "team_name",
+            "query" : "cats OR bats OR Illi*"
+        }
+    }
+}
+
+#multi fields
+GET /players/_search?size=50
+{
+    "query": {
+        "query_string" : {
+            "fields" : ["first_name","last_name^5"],
+            "query" : "jessica AND chastain",
+            "type": "cross_fields"
+        }
+    }
+}
+
+# fuzzy
+GET /players/_search?size=50
+{
+    "query": {
+        "query_string" : {
+            "default_field" : "team_name",
+            "query" : "Illinosi~"
+        }
+    }
+}
+
+# proximity
+GET /players/_search?size=50
+{
+    "query": {
+        "query_string" : {
+            "default_field" : "team_name",
+            "query" : "\"awesome giants\"~4"
+        }
+    }
+}
+
+## Simple query string
+# Unlike the regular query_string query, the simple_query_string query will never throw an exception, and discards invalid parts of the query
+# can be exposed to end-users
+
+GET /_search
+{
+  "query": {
+    "simple_query_string" : {
+        "query": "+jessica +(chastain | sloane)",
+        "fields": ["first_name", "last_name"],
+        "default_operator": "and",
+        "flags" : "OR|AND|PREFIX"
+    }
+  }
+}
+
+### ----- FROM/SIZE ------
+GET /_search
+{
+    "from" : 2, "size" : 2,
+    "query" : {
+        "term" : { "team_name" : "virginia" }
+    }
+}
+
+### ----- SORT ORDER ------
+# for multiple values fields like array there are min/max/avg modes
+
+GET /players/_search?size=50
+{
+    "sort" : [
+      {"scores": "desc"},
+        { "first_name.keyword" : "asc"},
+        {"last_name.keyword": "asc" }
+    ],
+    "query" : {
+        "term" : { "team_name" : "carolina" }
+    }
+}
+
+
+### ----- SEARCH AFTER ------
+# for use in pagination - uses sort data from prev page to get next page
+# sort of live cursor thingy
+
+GET players/_search
+{
+    "size": 5,
+    "query": {
+        "match" : {
+            "team_name" : "carolina"
+        }
+    },
+    "sort": [
+        {"team_name.keyword": "asc"},
+        {"_id": "asc"}
+    ]
+}
+
+#next page based on last page
+GET players/_search
+{
+    "size": 5,
+    "query": {
+        "match" : {
+            "team_name" : "carolina"
+        }
+    },
+    "search_after": ["North Carolina druids", "2V2K9GoB8630K7jg5tIq"],
+    "sort": [
+        {"team_name.keyword": "asc"},
+        {"_id": "asc"}
+    ]
+}
